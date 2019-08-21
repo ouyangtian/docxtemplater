@@ -168,6 +168,9 @@ const Docxtemplater = class Docxtemplater {
 		// Sometimes they don't exist (footer.xml for example)
 		this.templatedFiles.forEach(fileName => {
 			if (this.zip.files[fileName] != null) {
+                if (fileName == "word/document.xml") {
+                    console.log("a");
+                }
 				this.compileFile(fileName);
 			}
 		});

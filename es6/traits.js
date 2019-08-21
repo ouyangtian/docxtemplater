@@ -199,4 +199,5 @@ function expandToOne(postparsed, options) {
 module.exports = {
 	expandToOne,
 	getExpandToDefault,
+    expandOne,
 };

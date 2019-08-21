@@ -5,6 +5,7 @@ const spacePreserveModule = require("./modules/space-preserve");
 const rawXmlModule = require("./modules/rawxml");
 const expandPairTrait = require("./modules/expand-pair-trait");
 const render = require("./modules/render");
+const addCommentModule = require("./modules/add-comment");
 
 const PptXFileTypeConfig = {
 	getTemplatedFiles(zip) {
@@ -98,6 +99,7 @@ const DocXFileTypeConfig = {
 	tagRawXml: "w:p",
 	tagTextXml: "w:t",
 	baseModules: [
+        addCommentModule,
 		loopModule,
 		spacePreserveModule,
 		expandPairTrait,
