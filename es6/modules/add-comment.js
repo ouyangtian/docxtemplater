@@ -30,7 +30,8 @@ class AddCommentModule {
         let xmlObjectArray = null
         let segment = []
 
-        if (xmlObjectArray = this.getXmlObject(memberData)) {
+        if ((xmlObjectArray = this.getXmlObject(memberData)) && 
+            xmlObjectArray.length > 0) {
             // 根据xmlObject信息转换成rawxml
             let pos = 0;
 
@@ -114,13 +115,22 @@ class AddCommentModule {
                 let offset = 0;
 
                 if (canExpand(item)) {
-                    let data_value = data[node_name];
+                    function process(data) {
+                        let data_value = data[node_name];
+                        // 递归处理
+                        this.recursive({
+                            part: getExpand(item),
+                            data: data_value
+                        });
+                    }
 
-                    // 递归处理
-                    this.recursive({
-                        part: getExpand(item),
-                        data: data_value
-                    });
+                    if (data.length) {
+                        for (let i=0; i<data.length; ++i) {
+                            process.call(this, data[i])
+                        }
+                    } else {
+                        process.call(this, data)
+                    }
 
                 } else if (this.isPlainText(item)) {
                     let hasXml = false;
