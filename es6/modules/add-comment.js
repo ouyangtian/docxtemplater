@@ -438,6 +438,39 @@ class AddCommentModule {
         return doc
     }
 
+    generate_document_rels() {
+        let refs_file = this.docxtemplater.zip.files["word/_rels/document.xml.rels"]
+        
+        if (!refs_file) {
+            console.log("not found \"word/_rels/document.xml.rels\" file.")
+            return null
+        }
+         
+        const usedData = refs_file.asText();
+        let doc = new DOMParser().parseFromString(usedData, 'text/xml');
+        let relationships_list = doc.getElementsByTagName("Relationships")
+        let relationships = relationships_list[0]
+        let relationship_list = relationships.getElementsByTagName("Relationship")
+        let hasCommentsAttr = false
+
+        for (let i=0; i<relationship_list.length; ++i) {
+            let relationship = relationship_list[i]
+            if (relationship.getAttribute("Target") == "comments.xml") {
+                hasCommentsAttr = true;
+                break;
+            }
+        }
+
+        if (!hasCommentsAttr) {
+            let relationship = doc.createElement("Relationship")
+            relationship.setAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments")
+            relationship.setAttribute("Target", "comments.xml")
+            relationships.appendChild(relationship)
+        }
+
+        return doc
+    }
+
 	render(part, options) {
 		if (part.type !== "placeholder" || part.module !== moduleName) {
 			return null;
@@ -462,6 +495,11 @@ class AddCommentModule {
                 this.xmlDocuments["word/comments.xml"] = xml
             }
             this.comment_xml = xml
+
+            let ref_xml = this.generate_document_rels()
+            if (ref_xml) {
+                this.xmlDocuments["word/_rels/document.xml.rels"] = ref_xml
+            }
         }
         return parts
     }
