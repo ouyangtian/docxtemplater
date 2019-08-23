@@ -99,11 +99,11 @@ const DocXFileTypeConfig = {
 	tagRawXml: "w:p",
 	tagTextXml: "w:t",
 	baseModules: [
-        addCommentModule,
 		loopModule,
 		spacePreserveModule,
 		expandPairTrait,
 		rawXmlModule,
+        addCommentModule,
 		render,
 	],
 };

@@ -5,6 +5,7 @@ const { concatArrays, isContent, getLeft, getRight, getNearestLeft, getNearestRi
 const { throwRawTagShouldBeOnlyTextInParagraph, throwMalformedXml } = require("../errors");
 
 const re = /\<comment\s+value=['"]([\w\t]+)['"]\>([^<]+)\<\/comment\>/g
+const moduleName = "add-comment";
 
 class AddCommentModule {
     optionsTransformer(options, docxtemplater) {
@@ -12,6 +13,7 @@ class AddCommentModule {
         this.docxtemplater = docxtemplater;
         this.commentCount = 0
         this.comments = {}
+        this.comment_xml = null
 
         let modules = docxtemplater.modules
         for (let i=0; i<modules.length; ++i) {
@@ -135,7 +137,7 @@ class AddCommentModule {
                 } else if (this.isPlainText(item)) {
                     let hasXml = false;
 
-                    if (data.length) {
+                    if (typeof data != "string") {
                         // 是loop需要处理的数据
                         for (let i=0; i<data.length; ++i) {
                             let idxData = data[i]
@@ -148,22 +150,23 @@ class AddCommentModule {
                             }
                         }
 
-                        if (hasXml) {
-                            for (let i=0; i<data.length; ++i) {
-                                let idxData = data[i]
-                                const memberData = idxData[node_name]
-                                idxData[node_name] = this.convertToRawXml(memberData);
-                            }
-                        }
+//                        if (hasXml) {
+//                            for (let i=0; i<data.length; ++i) {
+//                                let idxData = data[i]
+//                                const memberData = idxData[node_name]
+//                                idxData[node_name] = this.convertToRawXml(memberData);
+//                            }
+//                        }
                     } else {
                         if (this.hasXmlObject(data)) {
-                            data[node_name] = this.convertToRawXml(data)
+//                            data[node_name] = this.convertToRawXml(data)
+                            hasXml = true;
                         }
                     }
 
                     if (hasXml) {
                         // 修改当前placeholder为rawxml类型
-                        item.module = "rawxml"
+                        item.module = moduleName //"rawxml"
 
                         if (index > 0) {
                             if (part[index - 1].type != "tag") {
@@ -277,10 +280,6 @@ class AddCommentModule {
                 });
 
             //new_postparsed = this.rawxml.postparse(postparsed);
-            let xml = this.generate_comments_xml()
-            if (xml) {
-                this.xmlDocuments["word/comments.xml"] = xml
-            }
         }
     }
 
@@ -331,7 +330,7 @@ class AddCommentModule {
     }
 
     generate_comments_xml() {
-        if (this.comments.length == 0)
+        if (Object.keys(this.comments).length == 0)
             return 
 
         let doc = null;
@@ -398,28 +397,28 @@ class AddCommentModule {
             element_comments.appendChild(element_comment)
 
             let element_w_p = doc.createElement("w:p")
-            let element_w_pPr = doc.createElement("w:pPr")
-            element_w_p.appendChild(element_w_pPr)
+//            let element_w_pPr = doc.createElement("w:pPr")
+//            element_w_p.appendChild(element_w_pPr)
             let element_w_r = doc.createElement("w:r")
             element_w_p.appendChild(element_w_r)
             element_comment.appendChild(element_w_p)
 
-            let element_w_pStyle = doc.createElement("w:pStyle")
-            element_w_pStyle.setAttribute("w:val", "2")
-            element_w_pPr.appendChild(element_w_pStyle)
+//            let element_w_pStyle = doc.createElement("w:pStyle")
+//            element_w_pStyle.setAttribute("w:val", "2")
+//            element_w_pPr.appendChild(element_w_pStyle)
 
-            let element_w_rPr = doc.createElement("w:rPr")
-            let element_w_rFonts = doc.createElement("w:rFonts")
-            element_w_rFonts.setAttribute("w:hint", "eastAsia")
-            element_w_rFonts.setAttribute("w:eastAsia", "宋体")
-            element_w_rPr.appendChild(element_w_rFonts)
-            let element_w_lang = doc.createElement("w:lang")
-            element_w_lang.setAttribute("w:val", "en-US")
-            element_w_lang.setAttribute("w:eastAsia", "zh-CN")
-            element_w_rPr.appendChild(element_w_lang)
-            element_w_pPr.appendChild(element_w_rPr)
+//            let element_w_rPr = doc.createElement("w:rPr")
+//            let element_w_rFonts = doc.createElement("w:rFonts")
+//            element_w_rFonts.setAttribute("w:hint", "eastAsia")
+//            element_w_rFonts.setAttribute("w:eastAsia", "宋体")
+//            element_w_rPr.appendChild(element_w_rFonts)
+//            let element_w_lang = doc.createElement("w:lang")
+//            element_w_lang.setAttribute("w:val", "en-US")
+//            element_w_lang.setAttribute("w:eastAsia", "zh-CN")
+//            element_w_rPr.appendChild(element_w_lang)
+//            element_w_pPr.appendChild(element_w_rPr)
 
-            element_w_r.appendChild(element_w_rPr.cloneNode(true))
+//            element_w_r.appendChild(element_w_rPr.cloneNode(true))
             let element_w_t = doc.createElement("w:t")
             // 评论内容
             element_w_t.textContent = options.comment_str
@@ -437,6 +436,34 @@ class AddCommentModule {
         //console.log(example + new XMLSerializer().serializeToString(element_comments))
 
         return doc
+    }
+
+	render(part, options) {
+		if (part.type !== "placeholder" || part.module !== moduleName) {
+			return null;
+		}
+
+		let value = options.scopeManager.getValue(part.value, { part });
+		if (value == null) {
+			value = options.nullGetter(part);
+		} else {
+            value = this.convertToRawXml(value)
+        }
+		if (!value) {
+			return { value: part.emptyValue || "" };
+		}
+		return { value };
+    }
+
+    postrender(parts, options) {
+        if (this.comment_xml == null && Object.keys(this.comments).length > 0) {
+            let xml = this.generate_comments_xml()
+            if (xml) {
+                this.xmlDocuments["word/comments.xml"] = xml
+            }
+            this.comment_xml = xml
+        }
+        return parts
     }
 }
 
